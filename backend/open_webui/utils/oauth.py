@@ -1,6 +1,7 @@
 import base64
 import logging
 import mimetypes
+import os
 import sys
 import uuid
 
@@ -224,6 +225,8 @@ class OAuthManager:
         client = self.get_client(provider)
         if client is None:
             raise HTTPException(404)
+        if r_uri := os.environ.get("AIBRARY_SIGNIN_REDIRECT_URI"):
+            return RedirectResponse(url=r_uri)
         return await client.authorize_redirect(request, redirect_uri)
 
     async def handle_callback(self, request, provider, response):
