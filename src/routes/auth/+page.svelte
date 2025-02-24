@@ -166,6 +166,16 @@
 		<div
 			class="fixed bg-transparent min-h-screen w-full flex justify-center font-primary z-50 text-black dark:text-white"
 		>
+			<div class="bg-[#5612CC] w-full flex flex-col items-center justify-center min-h-screen">
+				<!-- Title in the center -->
+				<h1 class="text-6xl font-bold text-white text-center mb-4">SignIn to Aibrary Chat</h1>
+		
+				<!-- Links at the bottom -->
+				<div class="absolute bottom-10 w-full text-center">
+					<a href="https://www.aibrary.dev/privacy-policy" class="text-lg text-white hover:underline">Privacy Policy</a>
+					<a href="https://www.aibrary.dev/terms-of-service" class="ml-4 text-lg text-white hover:underline">Terms Of Service</a>
+				</div>
+			</div>
 			<div class="w-full sm:max-w-md px-10 min-h-screen flex flex-col text-center">
 				{#if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}
 					<div class=" my-auto pb-10 w-full">
