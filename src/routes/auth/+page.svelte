@@ -184,7 +184,7 @@
 				{:else}
 					<div class="  my-auto pb-10 w-full dark:text-gray-100">
 						<form
-							class=" flex flex-col justify-center"
+							class=" flex flex-col justify-center bg-green-400"
 							on:submit={(e) => {
 								e.preventDefault();
 								submitHandler();
