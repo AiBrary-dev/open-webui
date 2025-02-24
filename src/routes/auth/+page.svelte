@@ -28,12 +28,6 @@
 
 	let ldapUsername = '';
 
-	const querystringValue = (key) => {
-		const querystring = window.location.search;
-		const urlParams = new URLSearchParams(querystring);
-		return urlParams.get(key);
-	};
-
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
 			console.log(sessionUser);
@@ -45,9 +39,7 @@
 			$socket.emit('user-join', { auth: { token: sessionUser.token } });
 			await user.set(sessionUser);
 			await config.set(await getBackendConfig());
-
-			const redirectPath = querystringValue('redirect') || '/';
-			goto(redirectPath);
+			goto('/');
 		}
 	};
 
@@ -166,16 +158,16 @@
 		<div
 			class="fixed bg-transparent min-h-screen w-full flex justify-center font-primary z-50 text-black dark:text-white"
 		>
-			<div class="bg-[#5612CC] w-full flex flex-col items-center justify-center min-h-screen">
-				<!-- Title in the center -->
-				<h1 class="text-6xl font-bold text-white text-center mb-4">SignIn to Aibrary Chat</h1>
-		
-				<!-- Links at the bottom -->
-				<div class="absolute bottom-10 w-full text-center">
-					<a href="https://www.aibrary.dev/privacy-policy" class="text-lg text-white hover:underline">Privacy Policy</a>
-					<a href="https://www.aibrary.dev/terms-of-service" class="ml-4 text-lg text-white hover:underline">Terms Of Service</a>
-				</div>
+		<div class="bg-[#5612CC] w-full flex flex-col items-center justify-center min-h-screen">
+			<!-- Big Title in the center -->
+			<h1 class="text-6xl font-bold text-white text-center mb-4">Aibrary Chat</h1>
+	
+			<!-- Links at the bottom -->
+			<div class="absolute bottom-10 w-full text-center">
+				<a href="https://www.aibrary.dev/privacy-policy" class="text-lg text-white hover:underline">Privacy Policy</a>
+				<a href="https://www.aibrary.dev/terms-of-service" class="ml-4 text-lg text-white hover:underline">Terms Of Service</a>
 			</div>
+		</div>
 			<div class="w-full sm:max-w-md px-10 min-h-screen flex flex-col text-center">
 				{#if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}
 					<div class=" my-auto pb-10 w-full">
@@ -194,7 +186,7 @@
 				{:else}
 					<div class="  my-auto pb-10 w-full dark:text-gray-100">
 						<form
-							class=" flex flex-col justify-center bg-green-400"
+							class=" flex flex-col justify-center"
 							on:submit={(e) => {
 								e.preventDefault();
 								submitHandler();
@@ -364,7 +356,7 @@
 												d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
 											/><path fill="none" d="M0 0h48v48H0z" />
 										</svg>
-										<span>{$i18n.t('Continue with {{provider}}', { provider: 'Google' })}</span>
+										<span>{$i18n.t('continue to AiBrary')}</span>
 									</button>
 								{/if}
 								{#if $config?.oauth?.providers?.microsoft}
