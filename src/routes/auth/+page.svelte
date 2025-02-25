@@ -41,11 +41,10 @@
 			if (sessionUser.token) {
 				localStorage.token = sessionUser.token;
 			}
-
 			$socket.emit('user-join', { auth: { token: sessionUser.token } });
 			await user.set(sessionUser);
 			await config.set(await getBackendConfig());
-			
+
 			const redirectPath = querystringValue('redirect') || '/';
 			goto(redirectPath);
 		}
@@ -166,10 +165,14 @@
 		<div
 			class="fixed bg-transparent min-h-screen w-full flex justify-center font-primary z-50 text-black dark:text-white"
 		>
-		<div class="bg-[#5612CC] w-full flex flex-col items-center justify-center min-h-screen">
-			<!-- Big Title in the center -->
-			<h1 class="text-6xl font-bold text-white text-center mb-4">AiBrary Chat</h1>
-	
+		<div class="bg-[#5612CC] w-full md:flex flex-col items-center justify-center min-h-screen hidden md:visible">
+			<img
+				crossorigin="anonymous"
+				src="{WEBUI_BASE_URL}/static/splash.png"
+				class="w-60 rounded-full dark:invert"
+				alt="logo"
+			/>
+
 			<!-- Links at the bottom -->
 			<div class="absolute bottom-10 w-full text-center">
 				<a href="https://www.aibrary.dev/privacy-policy" class="text-lg text-white hover:underline">Privacy Policy</a>
@@ -282,15 +285,14 @@
 									</div>
 								</div>
 							{/if}
-							{#if $WEBUI_NAME == "AiBrary"}
+							{#if $WEBUI_NAME === "AiBrary"}
 								<div class="flex flex-col mt-4">
-									<button
-											class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
-											type="submit"
+									<a
+										href="https://www.aibrary.dev/auth/signin/chat"
+										class="bg-gray-700/5 hover:bg-[#5612CC] dark:bg-gray-100/5 dark:hover:bg-[#5612CC] dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
 									>
 										signin
-									</button>
-
+									</a>
 								</div>
 							{/if}
 							<div class="mt-5">
