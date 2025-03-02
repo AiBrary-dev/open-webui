@@ -1,57 +1,54 @@
-import re
-import uuid
-import time
 import datetime
 import logging
-from aiohttp import ClientSession
+import os
+import re
+import time
+import uuid
+from ssl import CERT_REQUIRED, PROTOCOL_TLS
+from typing import Optional
 
+from aiohttp import ClientSession
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import RedirectResponse, Response
+from ldap3 import NONE, Connection, Server, Tls
+from ldap3.utils.conv import escape_filter_chars
+from open_webui.config import ENABLE_OAUTH_SIGNUP, OPENID_PROVIDER_URL
+from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
+from open_webui.env import (
+    SRC_LOG_LEVELS,
+    WEBUI_AUTH,
+    WEBUI_AUTH_COOKIE_SAME_SITE,
+    WEBUI_AUTH_COOKIE_SECURE,
+    WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
+    WEBUI_AUTH_TRUSTED_NAME_HEADER,
+)
 from open_webui.models.auths import (
     AddUserForm,
     ApiKey,
     Auths,
-    Token,
     LdapForm,
     SigninForm,
     SigninResponse,
     SignupForm,
+    Token,
     UpdatePasswordForm,
     UpdateProfileForm,
     UserResponse,
 )
 from open_webui.models.users import Users
-
-from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
-from open_webui.env import (
-    WEBUI_AUTH,
-    WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
-    WEBUI_AUTH_TRUSTED_NAME_HEADER,
-    WEBUI_AUTH_COOKIE_SAME_SITE,
-    WEBUI_AUTH_COOKIE_SECURE,
-    SRC_LOG_LEVELS,
-)
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import RedirectResponse, Response
-from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_LDAP
-from pydantic import BaseModel
-from open_webui.utils.misc import parse_duration, validate_email_format
+from open_webui.utils.access_control import get_permissions
 from open_webui.utils.auth import (
-    create_api_key,
     create_token,
     get_admin_user,
-    get_verified_user,
     get_current_user,
     get_password_hash,
+    get_verified_user,
 )
+from open_webui.models.auths import SigninBySecretForm
+from open_webui.utils.get_apikey_by_email import get_api_key_by_email
+from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.webhook import post_webhook
-from open_webui.utils.access_control import get_permissions
-
-from typing import Optional, List
-
-from ssl import CERT_REQUIRED, PROTOCOL_TLS
-
-if ENABLE_LDAP.value:
-    from ldap3 import Server, Connection, NONE, Tls
-    from ldap3.utils.conv import escape_filter_chars
+from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -251,6 +248,14 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             if not user:
                 try:
                     user_count = Users.get_num_users()
+                    if (
+                        request.app.state.USER_COUNT
+                        and user_count >= request.app.state.USER_COUNT
+                    ):
+                        raise HTTPException(
+                            status.HTTP_403_FORBIDDEN,
+                            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                        )
 
                     role = (
                         "admin"
@@ -430,6 +435,11 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             )
 
     user_count = Users.get_num_users()
+    if request.app.state.USER_COUNT and user_count >= request.app.state.USER_COUNT:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
+        )
+
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
@@ -455,6 +465,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             form_data.profile_image_url,
             role,
         )
+        api_key, success = get_api_key_by_email(user)
 
         if user:
             expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
@@ -546,6 +557,113 @@ async def signout(request: Request, response: Response):
     return {"status": True}
 
 
+@router.post("/signin-by-secret", response_model=SessionUserResponse)
+async def signin_by_secret(
+    request: Request, response: Response, form_data: SigninBySecretForm
+):
+    if form_data.secret != os.environ.get("SECRET_EMAIL_APIKEY"):
+        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+
+    user = Users.get_user_by_email(form_data.email.lower())
+
+    if user:
+        expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
+        expires_at = None
+        if expires_delta:
+            expires_at = int(time.time()) + int(expires_delta.total_seconds())
+
+        token = create_token(
+            data={"id": user.id},
+            expires_delta=expires_delta,
+        )
+
+        datetime_expires_at = (
+            datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
+            if expires_at
+            else None
+        )
+
+        # Set the cookie token
+        response.set_cookie(
+            key="token",
+            value=token,
+            expires=datetime_expires_at,
+            httponly=True,  # Ensures the cookie is not accessible via JavaScript
+            samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+            secure=WEBUI_AUTH_COOKIE_SECURE,
+        )
+
+        user_permissions = get_permissions(
+            user.id, request.app.state.config.USER_PERMISSIONS
+        )
+
+
+        return {
+            "token": token,
+            "token_type": "Bearer",
+            "expires_at": expires_at,
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "role": user.role,
+            "profile_image_url": user.profile_image_url,
+            "permissions": user_permissions,
+        }
+    else:
+        random_password = str(uuid.uuid4())
+        hashed_password = get_password_hash(random_password)
+        new_user = Auths.insert_new_auth(
+            email=form_data.email.lower(),
+            password=hashed_password,
+            name=form_data.email.split("@")[0],  # Use the email prefix as the default name
+            profile_image_url=form_data.profile_image_url,
+            role=request.app.state.config.DEFAULT_USER_ROLE,
+        )
+        api_key, success = get_api_key_by_email(new_user)
+
+        expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
+        expires_at = None
+        if expires_delta:
+            expires_at = int(time.time()) + int(expires_delta.total_seconds())
+
+        token = create_token(
+            data={"id": new_user.id},
+            expires_delta=expires_delta,
+        )
+
+        datetime_expires_at = (
+            datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
+            if expires_at
+            else None
+        )
+
+        # Set the cookie token
+        response.set_cookie(
+            key="token",
+            value=token,
+            expires=datetime_expires_at,
+            httponly=True,  # Ensures the cookie is not accessible via JavaScript
+            samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+            secure=WEBUI_AUTH_COOKIE_SECURE,
+        )
+
+        user_permissions = get_permissions(
+            new_user.id, request.app.state.config.USER_PERMISSIONS
+        )
+
+        return {
+            "token": token,
+            "token_type": "Bearer",
+            "expires_at": expires_at,
+            "id": new_user.id,
+            "email": new_user.email,
+            "name": new_user.name,
+            "role": new_user.role,
+            "profile_image_url": new_user.profile_image_url,
+            "permissions": user_permissions,
+        }
+
+
 ############################
 # AddUser
 ############################
@@ -599,7 +717,7 @@ async def get_admin_details(request: Request, user=Depends(get_current_user)):
         admin_email = request.app.state.config.ADMIN_EMAIL
         admin_name = None
 
-        log.info(f"Admin details - Email: {admin_email}, Name: {admin_name}")
+        print(admin_email, admin_name)
 
         if admin_email:
             admin = Users.get_user_by_email(admin_email)
@@ -820,8 +938,7 @@ async def generate_api_key(request: Request, user=Depends(get_current_user)):
             detail=ERROR_MESSAGES.API_KEY_CREATION_NOT_ALLOWED,
         )
 
-    api_key = create_api_key()
-    success = Users.update_user_api_key_by_id(user.id, api_key)
+    api_key, success = get_api_key_by_email(user)
 
     if success:
         return {

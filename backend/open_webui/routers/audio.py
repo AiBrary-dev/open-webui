@@ -71,7 +71,7 @@ from pydub.utils import mediainfo
 def is_mp4_audio(file_path):
     """Check if the given file is an MP4 audio file."""
     if not os.path.isfile(file_path):
-        log.error(f"File not found: {file_path}")
+        print(f"File not found: {file_path}")
         return False
 
     info = mediainfo(file_path)
@@ -88,7 +88,7 @@ def convert_mp4_to_wav(file_path, output_path):
     """Convert MP4 audio file to WAV format."""
     audio = AudioSegment.from_file(file_path, format="mp4")
     audio.export(output_path, format="wav")
-    log.info(f"Converted {file_path} to {output_path}")
+    print(f"Converted {file_path} to {output_path}")
 
 
 def set_faster_whisper_model(model: str, auto_update: bool = False):
@@ -266,6 +266,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         payload["model"] = request.app.state.config.TTS_MODEL
 
         try:
+            # print(payload)
             timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
             async with aiohttp.ClientSession(
                 timeout=timeout, trust_env=True
@@ -275,7 +276,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                     json=payload,
                     headers={
                         "Content-Type": "application/json",
-                        "Authorization": f"Bearer {request.app.state.config.TTS_OPENAI_API_KEY}",
+                        "Authorization": f"Bearer {user.api_key}",
                         **(
                             {
                                 "X-OpenWebUI-User-Name": user.name,
@@ -466,8 +467,8 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         return FileResponse(file_path)
 
 
-def transcribe(request: Request, file_path):
-    log.info(f"transcribe: {file_path}")
+def transcribe(request: Request, file_path, user):
+    print("transcribe", file_path)
     filename = os.path.basename(file_path)
     file_dir = os.path.dirname(file_path)
     id = filename.split(".")[0]
@@ -505,9 +506,7 @@ def transcribe(request: Request, file_path):
         try:
             r = requests.post(
                 url=f"{request.app.state.config.STT_OPENAI_API_BASE_URL}/audio/transcriptions",
-                headers={
-                    "Authorization": f"Bearer {request.app.state.config.STT_OPENAI_API_KEY}"
-                },
+                headers={"Authorization": f"Bearer {user.api_key}"},
                 files={"file": (filename, open(file_path, "rb"))},
                 data={"model": request.app.state.config.STT_MODEL},
             )
@@ -656,7 +655,7 @@ def transcription(
                     detail=ERROR_MESSAGES.DEFAULT(e),
                 )
 
-            data = transcribe(request, file_path)
+            data = transcribe(request, file_path, user)
             file_path = file_path.split("/")[-1]
             return {**data, "filename": file_path}
         except Exception as e:
@@ -679,22 +678,7 @@ def transcription(
 def get_available_models(request: Request) -> list[dict]:
     available_models = []
     if request.app.state.config.TTS_ENGINE == "openai":
-        # Use custom endpoint if not using the official OpenAI API URL
-        if not request.app.state.config.TTS_OPENAI_API_BASE_URL.startswith(
-            "https://api.openai.com"
-        ):
-            try:
-                response = requests.get(
-                    f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/models"
-                )
-                response.raise_for_status()
-                data = response.json()
-                available_models = data.get("models", [])
-            except Exception as e:
-                log.error(f"Error fetching models from custom endpoint: {str(e)}")
-                available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
-        else:
-            available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
+        available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
     elif request.app.state.config.TTS_ENGINE == "elevenlabs":
         try:
             response = requests.get(
@@ -725,37 +709,14 @@ def get_available_voices(request) -> dict:
     """Returns {voice_id: voice_name} dict"""
     available_voices = {}
     if request.app.state.config.TTS_ENGINE == "openai":
-        # Use custom endpoint if not using the official OpenAI API URL
-        if not request.app.state.config.TTS_OPENAI_API_BASE_URL.startswith(
-            "https://api.openai.com"
-        ):
-            try:
-                response = requests.get(
-                    f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/voices"
-                )
-                response.raise_for_status()
-                data = response.json()
-                voices_list = data.get("voices", [])
-                available_voices = {voice["id"]: voice["name"] for voice in voices_list}
-            except Exception as e:
-                log.error(f"Error fetching voices from custom endpoint: {str(e)}")
-                available_voices = {
-                    "alloy": "alloy",
-                    "echo": "echo",
-                    "fable": "fable",
-                    "onyx": "onyx",
-                    "nova": "nova",
-                    "shimmer": "shimmer",
-                }
-        else:
-            available_voices = {
-                "alloy": "alloy",
-                "echo": "echo",
-                "fable": "fable",
-                "onyx": "onyx",
-                "nova": "nova",
-                "shimmer": "shimmer",
-            }
+        available_voices = {
+            "alloy": "alloy",
+            "echo": "echo",
+            "fable": "fable",
+            "onyx": "onyx",
+            "nova": "nova",
+            "shimmer": "shimmer",
+        }
     elif request.app.state.config.TTS_ENGINE == "elevenlabs":
         try:
             available_voices = get_elevenlabs_voices(
