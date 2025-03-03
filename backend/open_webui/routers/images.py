@@ -476,9 +476,7 @@ async def image_generations(
     try:
         if request.app.state.config.IMAGE_GENERATION_ENGINE == "openai":
             headers = {}
-            headers["Authorization"] = (
-                f"Bearer {request.app.state.config.IMAGES_OPENAI_API_KEY}"
-            )
+            headers["Authorization"] = f"Bearer {user.api_key}"
             headers["Content-Type"] = "application/json"
 
             if ENABLE_FORWARD_USER_INFO_HEADERS:
