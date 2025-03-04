@@ -307,5 +307,3 @@ dist
 cypress/videos
 cypress/screenshots
 .vscode/settings.json
-database/
-.vscode/tasks.json

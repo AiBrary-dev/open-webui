@@ -1,7 +1,6 @@
 import base64
 import logging
 import mimetypes
-import os
 import sys
 import uuid
 
@@ -45,9 +44,7 @@ from open_webui.env import (
 from open_webui.utils.misc import parse_duration
 from open_webui.utils.auth import get_password_hash, create_token
 from open_webui.utils.webhook import post_webhook
-from open_webui.config import WEBUI_URL
 
-from open_webui.utils.get_apikey_by_email import get_api_key_by_email
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -149,7 +146,7 @@ class OAuthManager:
             nested_claims = oauth_claim.split(".")
             for nested_claim in nested_claims:
                 claim_data = claim_data.get(nested_claim, {})
-            user_oauth_groups = claim_data if isinstance(claim_data, list) else None
+            user_oauth_groups = claim_data if isinstance(claim_data, list) else []
 
         user_current_groups: list[GroupModel] = Groups.get_groups_by_member_id(user.id)
         all_available_groups: list[GroupModel] = Groups.get_groups()
@@ -225,8 +222,6 @@ class OAuthManager:
         client = self.get_client(provider)
         if client is None:
             raise HTTPException(404)
-        if r_uri := os.environ.get("AIBRARY_SIGNIN_REDIRECT_URI"):
-            return RedirectResponse(url=r_uri)
         return await client.authorize_redirect(request, redirect_uri)
 
     async def handle_callback(self, request, provider, response):
@@ -320,15 +315,6 @@ class OAuthManager:
         if not user:
             user_count = Users.get_num_users()
 
-            if (
-                request.app.state.USER_COUNT
-                and user_count >= request.app.state.USER_COUNT
-            ):
-                raise HTTPException(
-                    403,
-                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-                )
-
             # If the user does not exist, check if signups are enabled
             if auth_manager_config.ENABLE_OAUTH_SIGNUP:
                 # Check if an existing user with the same email already exists
@@ -413,12 +399,6 @@ class OAuthManager:
             data={"id": user.id},
             expires_delta=parse_duration(auth_manager_config.JWT_EXPIRES_IN),
         )
-        try: 
-            Users.update_user_api_key_by_id(user.id, get_api_key_by_email(user))
-        except Exception as e:
-            log.warning(
-                f"API-Key can't be fetched, please check your account on aibrary.dev/dashboard/api-key: {user_data}"
-            )
 
         if auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT and user.role != "admin":
             self.update_user_groups(
@@ -446,5 +426,5 @@ class OAuthManager:
                 secure=WEBUI_AUTH_COOKIE_SECURE,
             )
         # Redirect back to the frontend with the JWT token
-        redirect_url = f"{WEBUI_URL}auth#token={jwt_token}"
+        redirect_url = f"{request.base_url}auth#token={jwt_token}"
         return RedirectResponse(url=redirect_url, headers=response.headers)
