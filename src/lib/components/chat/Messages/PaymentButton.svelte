@@ -7,7 +7,7 @@
 		try {
 			loading = true;
 
-			// Check if Digital Goods API (Google Play Billing) is available
+			// Check if Digital Goods API is available
 			if (navigator.digitalGoods && navigator.digitalGoods.getService) {
 				const digitalGoods = await navigator.digitalGoods.getService('play');
 				const items = await digitalGoods.listPurchasableItems();
