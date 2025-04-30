@@ -1,5 +1,5 @@
 <script lang="ts">
-	export let label = 'Charge your account';
+	export let label = 'Charge your account!';
 	export let webPaymentUrl = 'https://www.aibrary.dev/chat/payment?chat=true';
 	let loading = false;
 
