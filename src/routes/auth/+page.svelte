@@ -181,7 +181,7 @@
 					<img
 						id="logo"
 						crossorigin="anonymous"
-						src= {`${WEBUI_BASE_URL}/static/splash.png`}
+						src={`${WEBUI_BASE_URL}/static/splash.png`}
 						class=" w-6 rounded-full"
 						alt="logo"
 					/>
@@ -199,14 +199,16 @@
 					<!-- Image at the top -->
 					<img
 						crossorigin="anonymous"
-						src= {`${WEBUI_BASE_URL}/static/aiModels.png`}
+						src={`${WEBUI_BASE_URL}/static/aiModels.png`}
 						class="w-full absolute top-0 p-1"
 						alt="logos"
 					/>
 					<!-- Links at the bottom -->
 					<div class="absolute bottom-18 w-full text-center">
-						<h1 class="text-4xl text-white pb-2 font-bold" >AiBrary Chat, Endless AI Possibilities!</h1>
-					
+						<h1 class="text-4xl text-white pb-2 font-bold">
+							AiBrary Chat, Endless AI Possibilities!
+						</h1>
+
 						<a
 							href="https://www.aibrary.dev/privacy-policy"
 							class="text-lg text-white hover:underline">Privacy Policy</a
