@@ -1,5 +1,5 @@
 <script lang="ts">
-	export let label = 'Charge your account!';
+	export let label = 'Charge your account!!';
 	export let webPaymentUrl = 'https://www.aibrary.dev/chat/payment?chat=true';
 	let loading = false;
 
@@ -9,6 +9,8 @@
 
 			// Check if Digital Goods API is available
 			if (navigator.digitalGoods && navigator.digitalGoods.getService) {
+				console.log("Inside Digital Goods API check");
+
 				const digitalGoods = await navigator.digitalGoods.getService('play');
 
 				const sku = 'credit_5usd';
