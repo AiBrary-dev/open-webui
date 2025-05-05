@@ -8,50 +8,48 @@
 			loading = true;
 
 			if ('getDigitalGoodsService' in window) {
-  // Digital Goods API is supported!
-  try {
-    const service =
-        await window.getDigitalGoodsService('https://play.google.com/billing');
-    // Google Play Billing is supported!
+				console.log("Inside Digital Goods API check");
 
-  } catch (error) {
-	window.location.href = webPaymentUrl;
-    return;
-  }
-}
+				// Fetch SKU details
+				const service = await window.getDigitalGoodsService('https://play.google.com/billing');
+				const skuDetails = await service.getDetails(['credit_5usd']);
+				const item = skuDetails[0];
 
-			// // Check if Digital Goods API is available
-			// if (navigator.digitalGoods && navigator.digitalGoods.getService) {
-			// 	console.log("Inside Digital Goods API check");
+				// Format localized price (optional, for logging or showing in UI)
+				const localizedPrice = new Intl.NumberFormat(
+					navigator.language,
+					{ style: 'currency', currency: item.price.currency }
+				).format(item.price.value);
+				console.log(`Localized Price: ${localizedPrice}`);
 
-			// 	const digitalGoods = await navigator.digitalGoods.getService('play');
+				// Define payment methods
+				const paymentMethods = [{
+					supportedMethods: 'https://play.google.com/billing',
+					data: { sku: item.itemId }
+				}];
 
-			// 	const sku = 'credit_5usd';
+				// Define payment details and fill in from SKU
+				const paymentDetails = {
+					total: {
+						label: 'Total',
+						amount: {
+							currency: item.price.currency,
+							value: item.price.value
+						}
+					}
+				};
 
-			// 	const paymentRequest = new PaymentRequest(
-			// 		[
-			// 			{
-			// 				supportedMethods: 'https://play.google.com/billing',
-			// 				data: { sku }
-			// 			}
-			// 		],
-			// 		{
-			// 			total: {
-			// 				label: '5 USD Credit',
-			// 				amount: { currency: 'USD', value: '5.35' }
-			// 			}
-			// 		}
-			// 	);
+				const request = new PaymentRequest(paymentMethods, paymentDetails);
 
-			// 	const paymentResponse = await paymentRequest.show();
-			// 	await paymentResponse.complete('success');
+				const paymentResponse = await request.show();
+				await paymentResponse.complete('success');
 
-			// 	alert('Payment successful via Google Play! 🎉');
-			// 	location.reload();
-			// } else {
-			// 	// Fallback for web users (redirect to manual payment page)
-			// 	window.location.href = webPaymentUrl;
-			// }
+				alert('Payment successful via Google Play! 🎉');
+				location.reload();
+			} else {
+				// Fallback
+				window.location.href = webPaymentUrl;
+			}
 		} catch (err) {
 			console.error('Payment failed:', err);
 			alert('Payment failed. Please try again.');
