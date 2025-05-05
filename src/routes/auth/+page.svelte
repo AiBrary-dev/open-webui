@@ -181,7 +181,7 @@
 					<img
 						id="logo"
 						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/splash.png"
+						src= {`${WEBUI_BASE_URL}/static/splash.png`}
 						class=" w-6 rounded-full"
 						alt="logo"
 					/>
@@ -199,7 +199,7 @@
 					<!-- Image at the top -->
 					<img
 						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/aiModels.png"
+						src= {`${WEBUI_BASE_URL}/static/aiModels.png`}
 						class="w-full absolute top-0 p-1"
 						alt="logos"
 					/>
