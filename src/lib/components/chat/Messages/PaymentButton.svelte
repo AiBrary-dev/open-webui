@@ -8,11 +8,14 @@
 			loading = true;
 
 			if ('getDigitalGoodsService' in window) {
-				console.log("Inside Digital Goods API check");
 
 				// Fetch SKU details
 				const service = await window.getDigitalGoodsService('https://play.google.com/billing');
+				console.log(service);
+
 				const skuDetails = await service.getDetails(['credit_5usd']);
+				console.log(skuDetails);
+
 				const item = skuDetails[0];
 
 				// Format localized price (optional, for logging or showing in UI)
@@ -28,18 +31,30 @@
 					data: { sku: item.itemId }
 				}];
 
+				console.log(paymentMethods);
+
+				
+
 				// Define payment details and fill in from SKU
+				// const paymentDetails = {
+				// 	total: {
+				// 		label: 'Total',
+				// 		amount: {
+				// 			currency: item.price.currency,
+				// 			value: item.price.value
+				// 		}
+				// 	}
+				// };
 				const paymentDetails = {
 					total: {
-						label: 'Total',
-						amount: {
-							currency: item.price.currency,
-							value: item.price.value
-						}
+						label: `Total`,
+						amount: {currency: `USD`, value: `0`}
 					}
 				};
 
 				const request = new PaymentRequest(paymentMethods, paymentDetails);
+				console.log(request);
+				
 
 				const paymentResponse = await request.show();
 				await paymentResponse.complete('success');
