@@ -12,45 +12,34 @@
 				// Fetch SKU details
 				const service = await window.getDigitalGoodsService('https://play.google.com/billing');
 				console.log(service);
-
+				
 				const skuDetails = await service.getDetails(['credit_5usd']);
 				console.log(skuDetails);
-
 				const item = skuDetails[0];
-
-				// Format localized price (optional, for logging or showing in UI)
-				const localizedPrice = new Intl.NumberFormat(
-					navigator.language,
-					{ style: 'currency', currency: item.price.currency }
-				).format(item.price.value);
-				console.log(`Localized Price: ${localizedPrice}`);
 
 				// Define payment methods
 				const paymentMethods = [{
 					supportedMethods: 'https://play.google.com/billing',
 					data: { sku: item.itemId }
 				}];
-
-				console.log(paymentMethods);
-
 				
 
 				// Define payment details and fill in from SKU
-				// const paymentDetails = {
-				// 	total: {
-				// 		label: 'Total',
-				// 		amount: {
-				// 			currency: item.price.currency,
-				// 			value: item.price.value
-				// 		}
-				// 	}
-				// };
 				const paymentDetails = {
 					total: {
-						label: `Total`,
-						amount: {currency: `USD`, value: `0`}
+						label: 'Total',
+						amount: {
+							currency: item.price.currency,
+							value: item.price.value
+						}
 					}
 				};
+				// const paymentDetails = {
+				// 	total: {
+				// 		label: `Total`,
+				// 		amount: {currency: `USD`, value: `0`}
+				// 	}
+				// };
 
 				const request = new PaymentRequest(paymentMethods, paymentDetails);
 				console.log(request);
