@@ -59,14 +59,14 @@
 				const paymentResponse = await request.show();
 
 				const { purchaseToken, purchaseTime, orderId } = paymentResponse.details;
-
+				console.log('Prod ID:',  item.itemId);
 				console.log('Purchase Token:', purchaseToken);
 				console.log('Purchase Time:', purchaseTime);
 				console.log('Order ID:', orderId);
-				await paymentResponse.complete('success');
+				// await paymentResponse.complete('success');
 
 
-				alert('Payment successful via Google Play! 🎉');
+				// alert('Payment successful via Google Play! 🎉');
 				location.reload();
 			} else {
 				// Fallback
