@@ -11,10 +11,8 @@
 
 				// Fetch SKU details
 				const service = await window.getDigitalGoodsService('https://play.google.com/billing');
-				console.log(service);
 
 				const skuDetails = await service.getDetails(['credit_5usd']);
-				console.log(skuDetails);
 
 				const item = skuDetails[0];
 
@@ -23,7 +21,6 @@
 					navigator.language,
 					{ style: 'currency', currency: item.price.currency }
 				).format(item.price.value);
-				console.log(`Localized Price: ${localizedPrice}`);
 
 				// Define payment methods
 				const paymentMethods = [{
@@ -31,20 +28,7 @@
 					data: { sku: item.itemId }
 				}];
 
-				console.log(paymentMethods);
-
-				
-
-				// Define payment details and fill in from SKU
-				// const paymentDetails = {
-				// 	total: {
-				// 		label: 'Total',
-				// 		amount: {
-				// 			currency: item.price.currency,
-				// 			value: item.price.value
-				// 		}
-				// 	}
-				// };
+			
 				const paymentDetails = {
 					total: {
 						label: `Total`,
@@ -57,12 +41,36 @@
 				
 
 				const paymentResponse = await request.show();
+				console.log(paymentResponse);
+				const {purchaseToken} = paymentResponse.details;
+				const response = await fetch('https://api.aibrary.dev/v0/payment/logger', {
+					method: 'POST',
+					headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json'
+					},
+					body: JSON.stringify({
+					productId:item.itemId,
+					purchaseToken,
+					})
+				});
+				const result = await response.json();
+				console.log('Server response:', result);
 
-				const { purchaseToken, purchaseTime, orderId } = paymentResponse.details;
-				console.log('Prod ID:',  item.itemId);
-				console.log('Purchase Token:', purchaseToken);
-				console.log('Purchase Time:', purchaseTime);
-				console.log('Order ID:', orderId);
+				// if (await acknowledgePurchaseOnBackend(purchaseToken, sku)) {
+				// 	// Optional: consume the purchase, allowing the user to purchase
+				// 	// the same item again.
+				// 	service.consume(purchaseToken);
+
+				// 	// Optional: tell the PaymentRequest API the validation was
+				// 	// successful. The user-agent may show a "payment successful"
+				// 	// message to the user.
+				// 	const paymentComplete =
+				// 			await paymentResponse.complete('success');
+				// } 
+					
+
+				
 				// await paymentResponse.complete('success');
 
 
