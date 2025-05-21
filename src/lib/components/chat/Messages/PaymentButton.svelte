@@ -42,30 +42,33 @@
 
 				const paymentResponse = await request.show();
 				console.log(paymentResponse);
-				
-				const existingPurchases = await service.listPurchases();
-				for (const p of existingPurchases) {
-					// Update the UI with items the user is already entitled to.
-					console.log(`Users has entitlement for ${p}`);
-
-					// Send data to your backend
-					const response = await fetch('https://api.aibrary.dev/v0/payment/logger', {
-						method: 'POST',
-						headers: {
-						'Content-Type': 'application/json',
-						'Accept': 'application/json'
-						},
-						body: JSON.stringify({
-						product_id:p.itemId,
-						purchase_token:p.purchaseToken,
-						})
-					});
-					const result = await response.json();
+				const {purchaseToken} = paymentResponse.details;
+				const response = await fetch('https://api.aibrary.dev/v0/payment/logger', {
+					method: 'POST',
+					headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json'
+					},
+					body: JSON.stringify({
+					productId:item.itemId,
+					purchaseToken,
+					})
+				});
+				const result = await response.json();
 				console.log('Server response:', result);
 
-				}
-				
-				
+				// if (await acknowledgePurchaseOnBackend(purchaseToken, sku)) {
+				// 	// Optional: consume the purchase, allowing the user to purchase
+				// 	// the same item again.
+				// 	service.consume(purchaseToken);
+
+				// 	// Optional: tell the PaymentRequest API the validation was
+				// 	// successful. The user-agent may show a "payment successful"
+				// 	// message to the user.
+				// 	const paymentComplete =
+				// 			await paymentResponse.complete('success');
+				// } 
+					
 
 				
 				// await paymentResponse.complete('success');
