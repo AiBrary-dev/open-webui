@@ -11,10 +11,8 @@
 
 				// Fetch SKU details
 				const service = await window.getDigitalGoodsService('https://play.google.com/billing');
-				console.log(service);
 
 				const skuDetails = await service.getDetails(['credit_5usd']);
-				console.log(skuDetails);
 
 				const item = skuDetails[0];
 
@@ -23,7 +21,6 @@
 					navigator.language,
 					{ style: 'currency', currency: item.price.currency }
 				).format(item.price.value);
-				console.log(`Localized Price: ${localizedPrice}`);
 
 				// Define payment methods
 				const paymentMethods = [{
@@ -31,20 +28,7 @@
 					data: { sku: item.itemId }
 				}];
 
-				console.log(paymentMethods);
-
-				
-
-				// Define payment details and fill in from SKU
-				// const paymentDetails = {
-				// 	total: {
-				// 		label: 'Total',
-				// 		amount: {
-				// 			currency: item.price.currency,
-				// 			value: item.price.value
-				// 		}
-				// 	}
-				// };
+			
 				const paymentDetails = {
 					total: {
 						label: `Total`,
@@ -57,12 +41,33 @@
 				
 
 				const paymentResponse = await request.show();
+				console.log(paymentResponse);
+				
+				const existingPurchases = await service.listPurchases();
+				for (const p of existingPurchases) {
+					// Update the UI with items the user is already entitled to.
+					console.log(`Users has entitlement for ${p}`);
 
-				const { purchaseToken, purchaseTime, orderId } = paymentResponse.details;
-				console.log('Prod ID:',  item.itemId);
-				console.log('Purchase Token:', purchaseToken);
-				console.log('Purchase Time:', purchaseTime);
-				console.log('Order ID:', orderId);
+					// Send data to your backend
+					const response = await fetch('https://api.aibrary.dev/v0/payment/logger', {
+						method: 'POST',
+						headers: {
+						'Content-Type': 'application/json',
+						'Accept': 'application/json'
+						},
+						body: JSON.stringify({
+						product_id:p.itemId,
+						purchase_token:p.purchaseToken,
+						})
+					});
+					const result = await response.json();
+				console.log('Server response:', result);
+
+				}
+				
+				
+
+				
 				// await paymentResponse.complete('success');
 
 
