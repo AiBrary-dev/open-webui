@@ -1,13 +1,15 @@
 <script lang="ts">
-	export let label = 'Charge Your Account.';
-	export let webPaymentUrl = 'https://www.aibrary.dev/chat/payment?chat=true';
-	let loading = false;
+       import { GOOGLE_PLAY_BILLING } from '$lib/constants';
+
+       export let label = 'Charge Your Account.';
+       export let webPaymentUrl = 'https://www.aibrary.dev/chat/payment?chat=true';
+       let loading = false;
 
 	async function initiatePayment() {
 		try {
 			loading = true;
 
-			if ('getDigitalGoodsService' in window) {
+                       if (GOOGLE_PLAY_BILLING === 'yes' && 'getDigitalGoodsService' in window) {
 
 				// Fetch SKU details
 				const service = await window.getDigitalGoodsService('https://play.google.com/billing');
